@@ -4,13 +4,11 @@ const app = express();
 
 app.use(express.json());
 
-// 1º Middleware: autenticação
 function autenticacao(req, res, next) {
     console.log('Autenticação realizada');
     next();
 }
 
-// 2º Middleware: validação do corpo
 function validarCorpo(req, res, next) {
     if (!req.body.titulo) {
         return res.status(400).json({
@@ -22,13 +20,11 @@ function validarCorpo(req, res, next) {
     next();
 }
 
-// 3º Middleware: registro de log
 function registrarLog(req, res, next) {
     console.log('Log: criação de tarefa');
     next();
 }
 
-// Rota POST /tarefas
 app.post(
     '/tarefas',
     [autenticacao, validarCorpo, registrarLog],
@@ -40,7 +36,6 @@ app.post(
     }
 );
 
-// Rota apenas para testar o servidor no navegador
 app.get('/', (req, res) => {
     res.send('Servidor funcionando!');
 });
