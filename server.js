@@ -1,45 +1,110 @@
-const express = require('express');
+import express from "express"
 
-const app = express();
+const app = express()
+const PORTA = 3000
 
-app.use(express.json());
+app.use(express.json())
 
-function autenticacao(req, res, next) {
-    console.log('Autenticação realizada');
-    next();
-}
+let tarefas = [
+    { id: 1, titulo: 'Lavar louça', concluida: true },
+    { id: 2, titulo: 'Lavar a casa', concluida: false },
+    { id: 3, titulo: 'Lavar roupa', concluida: true }
+]
 
-function validarCorpo(req, res, next) {
-    if (!req.body.titulo) {
-        return res.status(400).json({
-            erro: 'O título da tarefa é obrigatório'
-        });
+let proximoId = tarefas.length + 1
+
+app.get('/', (req, res) => {
+    res.json({ Mensagem: 'API de Tarefas no ar!' })
+})
+
+function filtrarPorStatus(req, res, next) {
+    const { concluida } = req.query
+
+    if (concluida !== undefined) {
+        const statusBooleano = concluida === 'true'
+
+        const tarefasConcluidas = tarefas.filter(
+            tarefa => tarefa.concluida === statusBooleano
+        )
+
+        return res.json(tarefasConcluidas)
     }
 
-    console.log('Corpo validado');
-    next();
+    next()
 }
 
-function registrarLog(req, res, next) {
-    console.log('Log: criação de tarefa');
-    next();
+app.get('/tarefas', filtrarPorStatus, (req, res) => {
+    res.json(tarefas)
+})
+
+function buscarTarefa(req, res, next) {
+    const { id } = req.params
+    const idTarefa = parseInt(id)
+
+    const tarefa = tarefas.find(t => t.id === idTarefa)
+
+    if (!tarefa) {
+        return res.status(404).json({
+            Error: 'Tarefa não encontrada!'
+        })
+    }
+
+    req.tarefa = tarefa
+
+    next()
+}
+
+app.get('/tarefas/:id', buscarTarefa, (req, res) => {
+    res.json(req.tarefa)
+})
+
+function autenticar(req, res, next) {
+    console.log('Autenticando...')
+    next()
+}
+
+function validarTarefa(req, res, next) {
+    const { titulo } = req.body
+
+    if (!titulo || typeof titulo !== 'string' || !titulo.trim()) {
+        return res.status(400).json({
+            Error: 'Título inválido ou campo vazio'
+        })
+    }
+
+    req.titulo = titulo
+
+    next()
+}
+
+function logger(req, res, next) {
+    console.log(
+        `${new Date().toISOString()} - ${req.method} ${req.url}`
+    )
+
+    next()
 }
 
 app.post(
     '/tarefas',
-    [autenticacao, validarCorpo, registrarLog],
+    [autenticar, validarTarefa, logger],
     (req, res) => {
+
+        const novaTarefa = {
+            id: proximoId++,
+            titulo: req.titulo,
+            concluida: false
+        }
+
+        tarefas.push(novaTarefa)
+
         res.status(201).json({
-            mensagem: 'Tarefa criada com sucesso',
-            tarefa: req.body
-        });
+            Mensagem: 'Tarefa criada com sucesso!',
+            tarefa: novaTarefa
+        })
     }
-);
+)
 
-app.get('/', (req, res) => {
-    res.send('Servidor funcionando!');
-});
-
-app.listen(3000, () => {
-    console.log('Servidor rodando na porta 3000');
-});
+app.listen(PORTA, () => {
+    console.log(`Servidor rodando em http://localhost:${PORTA}`)
+})
